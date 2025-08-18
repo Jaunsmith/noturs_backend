@@ -8,20 +8,16 @@ const usersRouter = require("./routes/userRoute");
 
 // 1. MIDDLEWARE is being handle her
 // the middleware is an app that can modify the incoming data
-app.use(express.json());
-app.use(morgan("dev")); // this is used to log the request to the console in development mode
 
-// personla middleware .....
-
-app.use((req, res, next) => {
-  console.log("Hello from the middleware 😉");
-  next(); // this is used to pass the request
-  // the next is used to pass the request
-});
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev")); // this is used to log the request to the console in development mode
+}
+app.use(express.json()); // this is used to log the request to the console in development mode
+app.use(express.static(`${__dirname}/public`)); // this is used to serve  static files from the public folder
 
 // 2. ROUTE HANDLERS this are the route handlers....
 app.use((req, res, next) => {
-  req.requestTime = new Date().toISOString();
+  req.requestTime = new Date().toLocaleString();
   next(); // this is used to pass the request
   // the next is used to pass the request
 });

@@ -1,53 +1,127 @@
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable no-else-return */
 // eslint-disable-next-line import/no-extraneous-dependencies
 const mongoose = require("mongoose");
+const slugify = require("slugify");
 
 // creating the schema for our project in which a model will be created out of it ..
 
-const toursSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "A tour must have a Name"],
-    // this helps to make sure that the name is unique and not repeated
-    unique: true,
-    trim: true, // this is used to remove the white space at the beginning and end of the string
+const toursSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "A tour must have a Name"],
+      // this helps to make sure that the name is unique and not repeated
+      unique: true,
+      trim: true, // this is used to remove the white space at the beginning and end of the string
+      maxLenghth: [
+        40,
+        "A tour name must have less or equal than 40 characters",
+      ],
+      minLength: [10, "A tour name must have more or equal than 10 characters"],
+      // validate: [validator.isAlpha, "Tour name must only contain characters"],
+    },
+    ratingsAverage: {
+      type: Number,
+      default: 4.6,
+      min: [1, "Rating cant be less than 1 is betwwwn 1 and 5"],
+      max: [5, "Rating cant be more than 5 is betwwwn 1 and 5"],
+      set: (val) => Math.round(val * 10) / 10, // this is used to round the value to one decimal place
+    },
+    ratingsQuantity: { type: Number, default: 0 },
+    slug: {
+      type: String,
+      unique: true, // this is used to make sure that the slug is unique and not repeated
+    },
+    price: { type: Number, required: [true, "A tour must have a Price"] },
+
+    duration: {
+      type: Number,
+      required: [true, "A tour must have a Duration of time"],
+    },
+    maxGroupSize: {
+      type: Number,
+      required: [true, "A tour must have a Group Size"],
+    },
+    difficulty: {
+      type: String,
+      required: [true, "A tour must have a Difficulty"],
+      enum: {
+        values: ["easy", "medium", "difficult"],
+        message: "Difficulty is either: easy, medium, difficult",
+      },
+    },
+    priceDiscount: {
+      type: Number,
+      validate: {
+        validator: function (val) {
+          //this.price is used to access the price field in the schema and omly works on the document level creation.....
+          return val < this.price;
+        },
+        message: "Discount price ({VALUE}) should be below regular price",
+      },
+    },
+    summary: {
+      type: String,
+      trim: true,
+      required: [true, "A tour must have a description"], // this is used to remove the white space at the beginning and end of the string
+    },
+    description: {
+      type: String,
+      trim: true, // this is used to remove the white space at the beginning and end of the string
+    },
+    imageCover: {
+      type: String,
+      trim: true,
+      required: [true, "A tour need to have image cover"], // this is used to remove the white space at the beginning and end of the string
+    },
+    images: [String], // this is used to store multiple images or any items  in an array so that it can be accesse easily using index
+    cretedAt: {
+      type: Date,
+      default: Date.now(),
+      select: false, // this is used to not show the particualr filed (createdAt) field in the response
+    },
+    startDates: [Date],
+    secretTour: {
+      type: Boolean,
+      default: false,
+    },
   },
-  ratingsAverage: { type: Number, default: 4.6 },
-  ratingsQuantity: { type: Number, default: 0 },
-  price: { type: Number, required: [true, "A tour must have a Price"] },
-  duration: {
-    type: Number,
-    required: [true, "A tour must have a Duration of time"],
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
-  maxGroupSize: {
-    type: Number,
-    required: [true, "A tour must have a Group Size"],
-  },
-  difficulty: {
-    type: String,
-    required: [true, "A tour must have a Difficulty"],
-  },
-  priceDiscount: Number,
-  summary: {
-    type: String,
-    trim: true,
-    required: [true, "A tour must have a description"], // this is used to remove the white space at the beginning and end of the string
-  },
-  description: {
-    type: String,
-    trim: true, // this is used to remove the white space at the beginning and end of the string
-  },
-  imageCover: {
-    type: String,
-    trim: true,
-    required: [true, "A tour need to have image cover"], // this is used to remove the white space at the beginning and end of the string
-  },
-  images: [String], // this is used to store multiple images or any items  in an array so that it can be accesse easily using index
-  cretedAt: {
-    type: Date,
-    default: Date.now(),
-    select: false, // this is used to not show the particualr filed (createdAt) field in the response
-  },
-  startDates: [Date],
+);
+
+toursSchema.virtual("durationWeeks").get(function () {
+  const nosOfWeek = this.duration / 7;
+  if (nosOfWeek < 1) {
+    return `${this.duration} days`; // this is used to return the number of days if the duration is less than 7 days
+  } else if (nosOfWeek >= 1) {
+    const wholeNos = Math.floor(nosOfWeek); // this is used to get the whole number of weeks
+    const weeks = this.duration - wholeNos * 7; // this is used to get the remaining weeks
+    return `${wholeNos} weeks and ${weeks} days`; // this is used to return the whole number of weeks and the remaining weeks
+  }
+}); // this is used to create a virtual field that is not stored in the database but can be accessed like a normal field and the normal function is used instead of arrow function to access the this keyword
+
+// Document middleware
+toursSchema.pre("save", function (next) {
+  this.slug = slugify(this.name, { lower: true }); // this is used to create a slug from the name of the tour and the lower option is used to make the slug lowercase
+  next(); // this is used to call the next middleware function in the stack
+});
+
+// Query middleware
+toursSchema.pre(/^find/, function (next) {
+  // the /^find/ regex is used to match all the find queries like find, findOne, findById, etc.
+  this.find({ secretTour: { $ne: true } });
+  next();
+});
+
+// Aggregation middleware
+toursSchema.pre("aggregate", function (next) {
+  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+  console.log(this.pipeline());
+  next();
 });
 
 // creating the model from the schema

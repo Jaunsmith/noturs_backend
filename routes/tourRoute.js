@@ -1,6 +1,7 @@
 const express = require("express");
 // eslint-disable-next-line import/no-useless-path-segments
 const tourController = require("./../controllers/tourController");
+const authenticationController = require("../controllers/authenticationController");
 
 // this is the route for the tours
 // this gives us the ability to create a new router for the tours and users
@@ -19,13 +20,17 @@ router.route("/monthly-plan/:year").get(tourController.getMonthlyPlan);
 // this is used to get the tour stats
 router
   .route("/")
-  .get(tourController.getAlltoursData)
+  .get(authenticationController.protectRoute, tourController.getAlltoursData)
   .post(tourController.createNewTour);
 
 router
   .route("/:id")
   .get(tourController.getTourData)
   .patch(tourController.updateTourData)
-  .delete(tourController.deleteTourData);
+  .delete(
+    authenticationController.protectRoute,
+    authenticationController.restrictedTo("admin", "tour-lead-guide"),
+    tourController.deleteTourData,
+  );
 
 module.exports = router;

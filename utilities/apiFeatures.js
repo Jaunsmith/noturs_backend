@@ -71,12 +71,12 @@ class APIFeatures {
     this.query = this.query.skip(skip).limit(limit); // Skip the number of documents and limit the number of documents returned
 
     // Check for invalid page numbers
-    if (this.queryString.page) {
-      const numTours = Tour.countDocuments();
-      if (skip >= numTours) {
-        throw new Error("This page does not exist");
-      }
-    }
+    // if (this.queryString.page) {
+    //   const numTours = Tour.countDocuments();
+    //   if (skip >= numTours) {
+    //     throw new Error("This page does not exist");
+    //   }
+    // }
     return this;
   }
 }

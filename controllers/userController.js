@@ -1,9 +1,14 @@
-exports.getAllUsersData = (req, res) => {
-  res.status(500).json({
-    status: "error get all user data",
-    message: "This route is not yet defined!",
+const User = require("../model/userModel");
+const asyncErrorCatch = require("../utilities/asyncErrorCatch");
+
+exports.getAllUsersData = asyncErrorCatch(async (req, res) => {
+  const getUsers = await User.find();
+  res.status(200).json({
+    status: "sucesss",
+    length: getUsers.length,
+    data: { users: getUsers },
   });
-};
+});
 
 exports.createNewUser = (req, res) => {
   res.status(500).json({

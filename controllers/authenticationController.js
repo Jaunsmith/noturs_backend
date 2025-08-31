@@ -7,7 +7,6 @@ const User = require("../model/userModel");
 const asyncErrorCatch = require("../utilities/asyncErrorCatch");
 const AppError = require("../utilities/appError");
 const sendEmail = require("../utilities/emailHandler");
-const { stat } = require("fs");
 
 const signInToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -191,4 +190,38 @@ exports.resetPassword = asyncErrorCatch(async (req, res, next) => {
   });
 });
 
-exports.updatePassword = asyncErrorCatch(async (req, res, next) => {});
+exports.updatePassword = asyncErrorCatch(async (req, res, next) => {
+  // getting the user from the password collection...
+  const user = await User.findById(req.user.id).select("+password"); // we use select here because the password is not selected by default in the user model...
+
+  // check if the posted current password is correct
+  if (!(await user.correctedPassword(req.body.currentPassword))) {
+    return next(new AppError("Your current password is wrong", 401));
+  }
+  // maiking sure the new password and confirm password are there
+  if (!req.body.password || !req.body.passwordConfirm) {
+    return next(
+      new AppError("Please enter your new password and confirm it", 400),
+    );
+  }
+
+  // making sure the new password is not the same as the previous password
+  if (await user.correctedPassword(req.body.password)) {
+    return next(
+      new AppError(
+        "Your new password must be different from the previous password",
+        400,
+      ),
+    );
+  }
+  // if so, update the password
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+  await user.save(); // we use save here because we want to run the validators and the pre save middlewares...
+  const token = signInToken(user._id);
+  res.status(200).json({
+    status: "success",
+    token,
+    message: "You have successfully updated your password",
+  });
+});

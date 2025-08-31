@@ -52,6 +52,7 @@ const userSchema = new mongoose.Schema({
     default: Date.now(),
   },
   passwordResetExpires: { type: Date },
+  currentPassword: { type: String },
 });
 
 userSchema.pre("save", function (next) {
@@ -95,9 +96,16 @@ userSchema.methods.createPasswordResetToken = function () {
 
   // console.log({ randomResetToken }, this.passwordResetToken);
 
-  this.passwordResetExpires = Date.now() + 5 * 60 * 1000;
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
 
   return randomResetToken;
+};
+
+userSchema.methods.checkUpdatedData = function (email, name) {
+  if (email === this.email || name === this.name) {
+    return true;
+  }
+  return false;
 };
 
 const User = mongoose.model.User || mongoose.model("User", userSchema);

@@ -11,6 +11,7 @@ class APIFeatures {
     // eslint-disable-next-line node/no-unsupported-features/es-syntax
     const queryObj = { ...this.queryString };
     const finalQueryObj = {};
+    console.log(`the supplied filter option is ${finalQueryObj}`);
 
     // 2) Remove special fields
     const excludedFields = ["page", "sort", "limit", "fields"];
@@ -42,12 +43,19 @@ class APIFeatures {
   }
 
   sort() {
-    // 1) Sort the results based on the 'sort' query parameter
     if (this.queryString.sort) {
-      const sortBy = this.queryString.sort.split(",").join(" ");
+      let sortParam = this.queryString.sort;
+      // If sort is an array (e.g. ['price', 'duration']), join into one string
+      if (Array.isArray(sortParam)) {
+        sortParam = sortParam.join(",");
+      }
+
+      // Now safely split into fields and join with space for Mongoose
+      const sortBy = sortParam.split(",").join(" ");
       this.query = this.query.sort(sortBy);
     } else {
-      this.query = this.query.sort("-createdAt"); // Default sorting by createdAt in descending order
+      // Default: sort by createdAt in descending order
+      this.query = this.query.sort("-createdAt");
     }
     return this;
   }

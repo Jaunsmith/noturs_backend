@@ -13,7 +13,31 @@ const signInToken = (id) =>
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
+const sendUserToken = (user, statusCode, res, message = "") => {
+  const token = signInToken(user._id);
+
+  const cookiesOption = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIES_EXPIRES_IN * 24 * 60 * 60 * 1000,
+    ), // this convert the time to milliseconds
+    httpOnly: true, // this prevent the cookies to be modified by the browser
+  };
+
+  if (process.env.NODE_ENV === "production") cookiesOption.secure = true; // this make the cooking to send in a secure connection
+  res.cookie("jwt", token, cookiesOption);
+
+  res.status(statusCode).json({
+    status: "sucesss",
+    token,
+    data: { user },
+    message,
+  });
+};
+
 exports.signUp = asyncErrorCatch(async (req, res, next) => {
+  console.log(
+    `the email enter is ${req.body.email} and the passsword enter is ${req.body.password}`,
+  );
   const newUser = await User.create({
     name: req.body.name,
     email: req.body.email,
@@ -23,20 +47,21 @@ exports.signUp = asyncErrorCatch(async (req, res, next) => {
     role: req.body.role,
   });
 
-  const token = signInToken(newUser._id);
-  newUser.password = undefined;
+  console.log(
+    `the email enter is ${newUser.$gtemail} and the passsword enter is ${newUser.password}`,
+  );
 
-  res.status(201).json({
-    status: "success",
-    token,
-    data: {
-      user: newUser,
-    },
-  });
+  newUser.password = undefined;
+  newUser.active = undefined;
+  newUser.passwordChangedAt = undefined;
+  sendUserToken(newUser, 201, res);
 });
 
 exports.signIn = asyncErrorCatch(async (req, res, next) => {
   const { email, password } = req.body;
+  console.log(
+    `the email enter is ${email} and the passsword enter is ${password}`,
+  );
 
   if (!email || !password) {
     return next(new AppError("Please enter your mail and password", 400));
@@ -47,12 +72,14 @@ exports.signIn = asyncErrorCatch(async (req, res, next) => {
   if (!user || !(await user.correctedPassword(password))) {
     return next(new AppError("Incorrect email or password", 401));
   }
-  const token = signInToken(user._id);
-  res.status(200).json({
-    status: "success",
-    token,
-    message: "You have successfully signed in",
-  });
+  user.password = undefined;
+  user.passwordChangedAt = undefined;
+  sendUserToken(
+    user,
+    200,
+    res,
+    "You have successfully signin to  your account",
+  );
 });
 
 exports.protectRoute = asyncErrorCatch(async (req, res, next) => {
@@ -140,11 +167,7 @@ exports.forgetPassword = asyncErrorCatch(async (req, res, next) => {
       subject: "Your password reset token (valid for 3mins)",
       message,
     });
-
-    res.status(200).json({
-      status: "success",
-      message: "Token sent to email!",
-    });
+    sendUserToken(user, 200, res, "Token sent to email!");
   } catch (error) {
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
@@ -183,11 +206,7 @@ exports.resetPassword = asyncErrorCatch(async (req, res, next) => {
   await user.save(); // we use save here because we want to run the validators and the
 
   //log the user in, send JWT
-  const token = signInToken(user._id);
-  res.status(200).json({
-    staus: "success",
-    token,
-  });
+  sendUserToken(user, 200, res);
 });
 
 exports.updatePassword = asyncErrorCatch(async (req, res, next) => {
@@ -218,10 +237,5 @@ exports.updatePassword = asyncErrorCatch(async (req, res, next) => {
   user.password = req.body.password;
   user.passwordConfirm = req.body.passwordConfirm;
   await user.save(); // we use save here because we want to run the validators and the pre save middlewares...
-  const token = signInToken(user._id);
-  res.status(200).json({
-    status: "success",
-    token,
-    message: "You have successfully updated your password",
-  });
+  sendUserToken(user, 200, res, "You have successfully updated your password");
 });

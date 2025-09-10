@@ -22,6 +22,11 @@ router.patch(
   authenticationController.protectRoute,
   userTourController.updateMyData,
 );
+router.delete(
+  "/deletemydata",
+  authenticationController.protectRoute,
+  userTourController.deleteMyData,
+);
 // this is the route for the users
 router
   .route("/")

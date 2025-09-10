@@ -1,42 +1,64 @@
+/* eslint-disable import/no-extraneous-dependencies */
 const express = require("express");
-const morgan = require("morgan"); // this is a middleware that logs the request to the console
+const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
+const hpp = require("hpp");
 
 const app = express();
 const AppError = require("./utilities/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const toursRouter = require("./routes/tourRoute");
 const usersRouter = require("./routes/userRoute");
+const sanitization = require("./utilities/sanitization");
 
-// 1. MIDDLEWARE is being handle her
-// the middleware is an app that can modify the incoming data
+// 1. MIDDLEWARE
+// 1. SECURITY HEADERS
+app.use(helmet());
 
+// 2. LOGGING (only in dev mode)
 if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev")); // this is used to log the request to the console in development mode
+  app.use(morgan("dev"));
 }
-app.use(express.json()); // this is used to log the request to the console in development mode
-app.use(express.static(`${__dirname}/public`)); // this is used to serve  static files from the public folder
 
-// 2. ROUTE HANDLERS this are the route handlers....
+// 3. RATE LIMITING
+const limiter = rateLimit({
+  max: 50,
+  windowMs: 60 * 60 * 1000,
+  message: "Too many requests from this IP, please try again in an hour!",
+});
+app.use("/api", limiter);
+
+// 4. BODY PARSER
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+
+// 5. DATA SANITIZATION - CUSTOM IMPLEMENTATION
+app.use(sanitization);
+
+// 6. Prevent HTTP Parameter Pollution
+app.use(hpp());
+
+// 7. STATIC FILES
+app.use(express.static(`${__dirname}/public`));
+
+// 8. Custom middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toLocaleString();
-  console.log(req.headers);
-  next(); // this is used to pass the request
-  // the next is used to pass the request
+  console.log("Request headers:", req.headers);
+  next();
 });
 
-//3. ROUTE
-// this have to come after the variable has been defined
-// this is use to handle the route properly incase any chnages need to occur it will be handle one place and refeclt in all the place that use it ...
+// 9. ROUTES
 app.use("/api/v1/tours", toursRouter);
 app.use("/api/v1/users", usersRouter);
 
-// to handle all unknown route...
-// always out this at the end after all the route have been defined
+// 10. Handle unknown routes
 app.all(/.*/, (req, res, next) => {
-  next(new AppError(`Can't find ${req.originalUrl} on this server`, 400)); // this is used to pass the error to the global error handling middleware and anything passed to next will be treated as an error
+  next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
 });
 
-// global error handling middleware and by specify 4 parameter it will be treated as error handling middleware
+// 11. Global error handler
 app.use(globalErrorHandler);
 
-module.exports = app; // this is used to export the app so that it can be used in other files
+module.exports = app;

@@ -53,6 +53,7 @@ const userSchema = new mongoose.Schema({
   },
   passwordResetExpires: { type: Date },
   currentPassword: { type: String },
+  active: { type: Boolean, default: true, select: false },
 });
 
 userSchema.pre("save", function (next) {
@@ -107,6 +108,11 @@ userSchema.methods.checkUpdatedData = function (email, name) {
   }
   return false;
 };
+userSchema.pre(/^find/, function (next) {
+  // this help us to only find a field which the active is set to true and this is run even before hitting the database in other to return an expression that meet our requirements...
+  this.find({ active: { $ne: false } });
+  next();
+});
 
 const User = mongoose.model.User || mongoose.model("User", userSchema);
 module.exports = User;

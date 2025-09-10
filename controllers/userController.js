@@ -58,6 +58,15 @@ exports.updateMyData = asyncErrorCatch(async (req, res, next) => {
   });
 });
 
+exports.deleteMyData = asyncErrorCatch(async (req, res, next) => {
+  // this is used to set the user inactive not permanent delete of itself just inactibe cause user might want to use the ap again. all what the user need to do is activate the account back...
+  await User.findByIdAndUpdate(req.user.id, { active: false });
+  res.status(204).json({
+    status: "Sucess",
+    data: null,
+  });
+});
+
 exports.createNewUser = (req, res) => {
   res.status(500).json({
     status: "error create new user ",

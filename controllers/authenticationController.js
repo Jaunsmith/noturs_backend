@@ -35,9 +35,6 @@ const sendUserToken = (user, statusCode, res, message = "") => {
 };
 
 exports.signUp = asyncErrorCatch(async (req, res, next) => {
-  console.log(
-    `the email enter is ${req.body.email} and the passsword enter is ${req.body.password}`,
-  );
   const newUser = await User.create({
     name: req.body.name,
     email: req.body.email,
@@ -47,10 +44,6 @@ exports.signUp = asyncErrorCatch(async (req, res, next) => {
     role: req.body.role,
   });
 
-  console.log(
-    `the email enter is ${newUser.$gtemail} and the passsword enter is ${newUser.password}`,
-  );
-
   newUser.password = undefined;
   newUser.active = undefined;
   newUser.passwordChangedAt = undefined;
@@ -59,9 +52,6 @@ exports.signUp = asyncErrorCatch(async (req, res, next) => {
 
 exports.signIn = asyncErrorCatch(async (req, res, next) => {
   const { email, password } = req.body;
-  console.log(
-    `the email enter is ${email} and the passsword enter is ${password}`,
-  );
 
   if (!email || !password) {
     return next(new AppError("Please enter your mail and password", 400));

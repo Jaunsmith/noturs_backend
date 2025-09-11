@@ -86,6 +86,37 @@ const toursSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // the part here is an embeded onject....
+    startLocation: {
+      type: {
+        type: String,
+        default: "Point",
+        enum: ["Point"],
+      },
+      coordinates: [Number], // this means we are expecting an arrary of numbers...
+      address: String,
+      description: String,
+    },
+    locations: [
+      {
+        type: {
+          type: String,
+          default: "Point",
+          enum: ["Point"],
+        },
+        coordinates: [Number], // this means we are expecting an arrary of numbers...
+        address: String,
+        description: String,
+        day: Number,
+      },
+    ],
+    // guides: Array, this helped to achieve the embeding goals...
+    guides: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "User", // this help to make referecing to another document in mongoDb like telling monogoe which document the id belong to....
+      },
+    ],
   },
   {
     toJSON: { virtuals: true },
@@ -123,6 +154,22 @@ toursSchema.pre("aggregate", function (next) {
   console.log(this.pipeline());
   next();
 });
+
+toursSchema.pre(/^find/, function (next) {
+  // the /^find/ regex is used to match all the find queries like find, findOne, findById, etc.
+  this.populate({
+    path: "guides",
+    select: "-__v -passwordChangedAt",
+  }); // this is used to get the id from the request thr .populate help to read tthe reference data...
+  next();
+});
+
+// this code is used to embed the data in tge tour guide the user document...
+// toursSchema.pre("save", async function (next) {
+//   const guidesPromises = this.guides.map(async (id) => await User.findById(id));
+//   this.guides = await Promise.all(guidesPromises);
+//   next();
+// });
 
 // creating the model from the schema
 const Tours = mongoose.models.Tours || mongoose.model("Tours", toursSchema); // this is used to create the model from the schema and also check if the model already exists to avoid overwriting it

@@ -40,7 +40,7 @@ exports.getAlltoursData = asyncErrorCatch(async (req, res, next) => {
 
 exports.getTourData = asyncErrorCatch(async (req, res, next) => {
   const { id } = req.params;
-  const tours = await Tour.findById(id); // this is used to get the id from the request
+  const tours = await Tour.findById(id);
 
   if (!tours) {
     return next(new AppError(`No any data found with this ID: ${id}`, 404)); // this is used to pass the error to the global error handling middleware

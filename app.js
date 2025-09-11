@@ -10,6 +10,7 @@ const AppError = require("./utilities/appError");
 const globalErrorHandler = require("./controllers/errorController");
 const toursRouter = require("./routes/tourRoute");
 const usersRouter = require("./routes/userRoute");
+const reviewRouter = require("./routes/reviewRoute");
 const sanitization = require("./utilities/sanitization");
 
 // 1. MIDDLEWARE
@@ -45,13 +46,14 @@ app.use(express.static(`${__dirname}/public`));
 // 8. Custom middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toLocaleString();
-  console.log("Request headers:", req.headers);
+  // console.log("Request headers:", req.headers);
   next();
 });
 
 // 9. ROUTES
 app.use("/api/v1/tours", toursRouter);
 app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/reviews", reviewRouter);
 
 // 10. Handle unknown routes
 app.all(/.*/, (req, res, next) => {

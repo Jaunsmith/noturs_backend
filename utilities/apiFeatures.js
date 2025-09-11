@@ -11,7 +11,6 @@ class APIFeatures {
     // eslint-disable-next-line node/no-unsupported-features/es-syntax
     const queryObj = { ...this.queryString };
     const finalQueryObj = {};
-    console.log(`the supplied filter option is ${finalQueryObj}`);
 
     // 2) Remove special fields
     const excludedFields = ["page", "sort", "limit", "fields"];

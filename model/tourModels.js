@@ -124,6 +124,9 @@ const toursSchema = new mongoose.Schema(
   },
 );
 
+toursSchema.index({ price: 1, ratingsAverage: 1 }); // this is helped to boost our query for instance instead of looping throuug the whole doucment in the collection it only loop through document that match put condition since it alread stored those document in an order manner...
+toursSchema.index({ startLocation: "2dsphere" }); // this is used to create a geospatial index for the startLocation field to enable geospatial queries like finding tours within a certain distance from a given point...
+
 toursSchema.virtual("durationWeeks").get(function () {
   const nosOfWeek = this.duration / 7;
   if (nosOfWeek < 1) {
@@ -134,6 +137,12 @@ toursSchema.virtual("durationWeeks").get(function () {
     return `${wholeNos} weeks and ${weeks} days`; // this is used to return the whole number of weeks and the remaining weeks
   }
 }); // this is used to create a virtual field that is not stored in the database but can be accessed like a normal field and the normal function is used instead of arrow function to access the this keyword
+
+toursSchema.virtual("reviews", {
+  ref: "Review", // this is the model to which we are referencing
+  foreignField: "tour", // this is the field in the review model that references the tour model
+  localField: "_id", // this is the field in the tour model that is referenced by the review model
+}); // this is used to create a virtual populate to get the review data for each tour without storing it in the database
 
 // Document middleware
 toursSchema.pre("save", function (next) {
@@ -148,12 +157,12 @@ toursSchema.pre(/^find/, function (next) {
   next();
 });
 
-// Aggregation middleware
-toursSchema.pre("aggregate", function (next) {
-  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
-  console.log(this.pipeline());
-  next();
-});
+// Aggregation middleware.. commented for the geonear testing cause it must be first in the pipe line stage..
+// toursSchema.pre("aggregate", function (next) {
+//   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+//   console.log(this.pipeline());
+//   next();
+// });
 
 toursSchema.pre(/^find/, function (next) {
   // the /^find/ regex is used to match all the find queries like find, findOne, findById, etc.

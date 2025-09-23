@@ -12,26 +12,17 @@ router.post("/signup", authenticationController.signUp);
 router.post("/signin", authenticationController.signIn);
 router.post("/forgetpassword", authenticationController.forgetPassword);
 router.patch("/resetpassword/:token", authenticationController.resetPassword);
-router.patch(
-  "/updatemypassword",
-  authenticationController.protectRoute,
-  authenticationController.updatePassword,
-);
-router.patch(
-  "/updatemydata",
-  authenticationController.protectRoute,
-  userTourController.updateMyData,
-);
-router.delete(
-  "/deletemydata",
-  authenticationController.protectRoute,
-  userTourController.deleteMyData,
-);
+
+router.use(authenticationController.protectRoute); // this is used to protect all the routes that come after this middleware...
+
+router.patch("/updatemypassword", authenticationController.updatePassword);
+router.patch("/updatemydata", userTourController.updateMyData);
+router.delete("/deletemydata", userTourController.deleteMyData);
 // this is the route for the users
-router
-  .route("/")
-  .get(userTourController.getAllUsersData)
-  .post(userTourController.createNewUser);
+router.get("/me", userTourController.getMe, userTourController.getUserData);
+
+router.use(authenticationController.restrictedTo("admin")); // only admin can access the routes that come after this middleware
+router.route("/").get(userTourController.getAllUsers);
 router
   .route("/:id")
   .get(userTourController.getUserData)

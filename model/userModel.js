@@ -56,6 +56,7 @@ const userSchema = new mongoose.Schema({
   active: { type: Boolean, default: true, select: false },
 });
 
+// this part is  first commented cause we are using import data with a ready made of all the simulation data needed to run test our app...since we not just creating it...those user data...
 userSchema.pre("save", function (next) {
   if (!this.isModified("password")) {
     return next();

@@ -1,6 +1,7 @@
 const User = require("../model/userModel");
 const AppError = require("../utilities/appError");
 const asyncErrorCatch = require("../utilities/asyncErrorCatch");
+const handlerFactory = require("./handlerFactory");
 
 const filterObject = (obj, ...allowedFields) => {
   const newObj = {};
@@ -9,15 +10,6 @@ const filterObject = (obj, ...allowedFields) => {
   });
   return newObj;
 };
-
-exports.getAllUsersData = asyncErrorCatch(async (req, res) => {
-  const getUsers = await User.find();
-  res.status(200).json({
-    status: "sucesss",
-    length: getUsers.length,
-    data: { users: getUsers },
-  });
-});
 
 exports.updateMyData = asyncErrorCatch(async (req, res, next) => {
   // This check for an empty body data...
@@ -67,30 +59,14 @@ exports.deleteMyData = asyncErrorCatch(async (req, res, next) => {
   });
 });
 
-exports.createNewUser = (req, res) => {
-  res.status(500).json({
-    status: "error create new user ",
-    message: "This route is not yet defined!",
-  });
+exports.getMe = (req, res, next) => {
+  req.params.id = req.user.id; // this is used to get the id of the currently logged in user and set it to the params id so that we can use the getOne handler factory to get the user data...
+  next();
 };
 
-exports.getUserData = (req, res) => {
-  res.status(500).json({
-    status: "error get User data",
-    message: "This route is not yet defined!",
-  });
-};
+exports.getAllUsers = handlerFactory.getAll(User);
+exports.getUserData = handlerFactory.getOne(User);
 
-exports.updateUserData = (req, res) => {
-  res.status(500).json({
-    status: "error uodate user data ",
-    message: "This route is not yet defined!",
-  });
-};
+exports.updateUserData = handlerFactory.updateOne(User);
 
-exports.deleteUserData = (req, res) => {
-  res.status(500).json({
-    status: "error delete user data",
-    message: "This route is not yet defined!",
-  });
-};
+exports.deleteUserData = handlerFactory.deleteOne(User);

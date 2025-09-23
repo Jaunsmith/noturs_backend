@@ -1,10 +1,10 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable import/no-useless-path-segments */
 /* eslint-disable node/no-unsupported-features/es-syntax */
+const AppError = require("../utilities/appError");
 const Tour = require("./../model/tourModels");
 const asyncErrorCatch = require("./../utilities/asyncErrorCatch");
-const APIFeatures = require("./../utilities/apiFeatures");
-const AppError = require("../utilities/appError");
+const handlerFactory = require("./handlerFactory");
 
 // this check if the data sending is valid or not that means the format we want..
 exports.aliasTopTours = (req, res, next) => {
@@ -22,65 +22,18 @@ exports.aliasTopTours = (req, res, next) => {
   next();
 };
 
-exports.getAlltoursData = asyncErrorCatch(async (req, res, next) => {
-  const apiFeatures = new APIFeatures(Tour.find(), req.query)
-    .filter()
-    .sort()
-    .limitFields()
-    .pagenation();
-  // 4) Execute query
-  const tours = await apiFeatures.query;
+exports.getAlltoursData = handlerFactory.getAll(Tour);
 
-  res.status(200).json({
-    status: "success",
-    results: tours.length,
-    data: { tours },
-  });
+exports.getTourData = handlerFactory.getOne(Tour, {
+  path: "reviews",
+  select: "review rating user createdAt _id",
 });
 
-exports.getTourData = asyncErrorCatch(async (req, res, next) => {
-  const { id } = req.params;
-  const tours = await Tour.findById(id);
+exports.createNewTour = handlerFactory.createOne(Tour);
 
-  if (!tours) {
-    return next(new AppError(`No any data found with this ID: ${id}`, 404)); // this is used to pass the error to the global error handling middleware
-  }
-  res.status(200).json({
-    status: "sucesss",
-    data: { tours }, // this is used to send the tour data
-  });
-});
+exports.updateTourData = handlerFactory.updateOne(Tour);
 
-exports.createNewTour = asyncErrorCatch(async (req, res, next) => {
-  const newTour = await Tour.create(req.body);
-  res.status(201).json({
-    status: "successs",
-    tour: newTour, // this is used to send the new tour that was created
-  });
-});
-
-exports.updateTourData = asyncErrorCatch(async (req, res, next) => {
-  const tours = await Tour.findByIdAndUpdate(req.params.id, req.body, {
-    new: true, // this is used to return the updated tour
-    runValidators: true, // this is used to run the validators on the updated tour thats the rules we set in our schema take effect as well in other to get a correct data...
-  });
-  if (!tours) {
-    return next(
-      new AppError(`No any data found with this ID: ${req.params.id}`, 404),
-    ); // this is used to pass the error to the global error handling middleware
-  }
-  res.status(200).json({ status: "success", data: { tours } });
-});
-
-exports.deleteTourData = asyncErrorCatch(async (req, res, next) => {
-  const tour = await Tour.findByIdAndDelete(req.params.id);
-  if (!tour) {
-    return next(
-      new AppError(`No any data found with this ID: ${req.params.id}`, 404),
-    ); // this is used to pass the error to the global error handling middleware
-  }
-  res.status(204).json({ status: "success", data: null });
-});
+exports.deleteTourData = handlerFactory.deleteOne(Tour);
 
 exports.getToursStats = asyncErrorCatch(async (req, res, next) => {
   const stats = await Tour.aggregate([
@@ -152,6 +105,77 @@ exports.getMonthlyPlan = asyncErrorCatch(async (req, res, next) => {
     status: "success",
     data: {
       monthlyPlan, // this is used to send the monthly plan data
+    },
+  });
+});
+
+exports.getToursRange = asyncErrorCatch(async (req, res, next) => {
+  const { distance, latlng, unit } = req.params;
+  const [latitude, longitude] = latlng.split(",");
+
+  const radius = unit === "mi" ? distance / 3963.2 : distance / 6378.1;
+
+  if (!latitude || !longitude) {
+    next(
+      new AppError(
+        "Please kindly provide the latitue and the logitude in the format latitude, longitude",
+        400,
+      ),
+    );
+  }
+
+  const tours = await Tour.find({
+    startLocation: {
+      $geoWithin: { $centerSphere: [[longitude, latitude], radius] },
+    },
+  });
+
+  res.status(200).json({
+    status: "Location succesfully set",
+    results: tours.length,
+    data: {
+      data: tours,
+    },
+  });
+
+  next();
+});
+
+exports.getDistances = asyncErrorCatch(async (req, res, next) => {
+  const { latlng, unit } = req.params;
+
+  const [lat, lng] = latlng.split(",");
+
+  if (!lat || !lng) {
+    next(
+      new AppError("Please kindly provide the latitude and the logitude", 400),
+    );
+  }
+
+  const distances = await Tour.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: "Point",
+          coordinates: [lng * 1, lat * 1],
+        },
+        distanceField: "distance", // this is where all the distnance calcukation will be stored...
+        distanceMultiplier: unit === "mi" ? 0.000621371 : 0.001, // this is used to convert the distance from the meter that the geospatil stpre data to desire units...
+      },
+    },
+    {
+      $project: {
+        distance: 1,
+        name: 1,
+      },
+    }, // this help us to set what we want to keep in our result .. what we want to be display
+  ]);
+
+  res.status(200).json({
+    status: "Sucess",
+    result: distances.length,
+    data: {
+      data: distances,
     },
   });
 });
